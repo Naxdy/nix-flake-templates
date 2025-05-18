@@ -98,9 +98,21 @@
     in
     {
       devShells = forEachSupportedSystem (
-        { pkgs, rustToolchain, ... }:
+        {
+          pkgs,
+          rustToolchain,
+          treefmt,
+          ...
+        }:
         {
           default = pkgs.mkShell {
+            nativeBuildInputs = [
+              rustToolchain
+              treefmt
+            ];
+          };
+
+          toolchainOnly = pkgs.mkShell {
             nativeBuildInputs = [
               rustToolchain
             ];

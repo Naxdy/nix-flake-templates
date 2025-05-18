@@ -102,6 +102,7 @@
           pkgs,
           rustToolchain,
           treefmt,
+          craneBuildArgs,
           ...
         }:
         {
@@ -109,7 +110,9 @@
             nativeBuildInputs = [
               rustToolchain
               treefmt
-            ];
+            ] ++ (craneBuildArgs.nativeBuildInputs or [ ]);
+
+            buildInputs = craneBuildArgs.buildInputs or [ ];
           };
 
           toolchainOnly = pkgs.mkShell {

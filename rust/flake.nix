@@ -84,14 +84,15 @@
           in
           f {
             inherit
-              pkgs
-              rustToolchain
-              craneLib
-              craneBuildArgs
               cargoArtifacts
               craneArgs
-              treefmtEval
+              craneBuildArgs
+              craneLib
+              pkgs
+              rustToolchain
+              system
               treefmt
+              treefmtEval
               ;
           }
         );
@@ -103,10 +104,13 @@
           rustToolchain,
           treefmt,
           craneBuildArgs,
+          system,
           ...
         }:
         {
-          default = pkgs.mkShell {
+          default = self.devShells.${system}.full;
+
+          full = pkgs.mkShell {
             nativeBuildInputs = [
               rustToolchain
               treefmt
@@ -126,7 +130,12 @@
       formatter = forEachSupportedSystem ({ treefmt, ... }: treefmt);
 
       packages = forEachSupportedSystem (
-        { craneLib, craneBuildArgs, ... }:
+        {
+          craneLib,
+          craneBuildArgs,
+          system,
+          ...
+        }:
         {
           default = craneLib.buildPackage craneBuildArgs;
 

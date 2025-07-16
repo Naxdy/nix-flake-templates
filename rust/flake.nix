@@ -35,61 +35,17 @@
               overlays = [ fenix.overlays.default ];
             };
 
-            rustToolchain = pkgs.fenix.stable.withComponents [
-              "cargo"
-              "rustc"
-              "rustfmt"
-              "rust-std"
-              "rust-analyzer"
-              "clippy"
-            ];
-
-            # more info on https://crane.dev/API.html
-            craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
-
-            cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-
-            craneArgs = {
-              pname = cargoToml.workspace.package.name or cargoToml.package.name;
-              version = cargoToml.workspace.package.version or cargoToml.package.version;
-
-              src = craneLib.cleanCargoSource ./.;
-
-              strictDeps = true;
-
-              # can add `nativeBuildInputs` or `buildInputs` here
-
-              env = {
-                # print backtrace on compilation failure
-                RUST_BACKTRACE = "1";
-
-                # treat warnings as errors
-                RUSTFLAGS = "-Dwarnings";
-                RUSTDOCFLAGS = "-Dwarnings";
-              };
-            };
-
-            cargoArtifacts = craneLib.buildDepsOnly craneArgs;
-
-            craneBuildArgs = craneArgs // {
-              src = self;
-              inherit cargoArtifacts;
-            };
+            package = pkgs.callPackage ./default.nix { inherit crane; };
 
             treefmtEval = treefmt-nix.lib.evalModule pkgs (
-              import ./treefmt.nix { inherit rustToolchain cargoToml; }
+              import ./treefmt.nix { inherit (package.package.passthru) rustToolchain cargoToml; }
             );
 
             treefmt = treefmtEval.config.build.wrapper;
           in
           f {
             inherit
-              cargoArtifacts
-              craneArgs
-              craneBuildArgs
-              craneLib
               pkgs
-              rustToolchain
               system
               treefmt
               treefmtEval
@@ -105,23 +61,23 @@
           treefmt,
           craneBuildArgs,
           system,
+          package,
           ...
         }:
         {
           default = self.devShells.${system}.full;
 
           full = pkgs.mkShell {
-            nativeBuildInputs = [
-              rustToolchain
+            packages = [
               treefmt
-            ] ++ (craneBuildArgs.nativeBuildInputs or [ ]);
+            ];
 
-            buildInputs = craneBuildArgs.buildInputs or [ ];
+            inputsFrom = [ self.packages.${system}.default ];
           };
 
           toolchainOnly = pkgs.mkShell {
             nativeBuildInputs = [
-              rustToolchain
+              package.package.passthru.rustToolchain
             ];
           };
         }
@@ -131,43 +87,35 @@
 
       packages = forEachSupportedSystem (
         {
-          craneLib,
-          craneBuildArgs,
-          system,
+          package,
           ...
         }:
         {
-          default = craneLib.buildPackage craneBuildArgs;
+          default = package.package;
 
-          docs = craneLib.cargoDoc (
-            craneBuildArgs
-            // {
-              # used to disable `--no-deps`, which crane enables by default,
-              # so we include all packages in the resulting docs, to have fully-functional
-              # offline docs
-              cargoDocExtraArgs = "";
-            }
-          );
+          inherit (package) docs;
         }
       );
 
       checks = forEachSupportedSystem (
         {
-          craneLib,
-          craneBuildArgs,
+          pkgs,
           treefmtEval,
+          system,
           ...
         }:
+        let
+          testsFrom =
+            pkg:
+            pkgs.lib.mapAttrs' (name: value: {
+              name = "${pkg.pname}-${name}";
+              inherit value;
+            }) pkg.passthru.tests;
+        in
         {
-          # can also use `cargoNextest`
-          test = craneLib.cargoTest craneBuildArgs;
-
-          doc = craneLib.cargoDoc craneBuildArgs;
-
-          clippy = craneLib.cargoClippy craneBuildArgs;
-
           treefmt = treefmtEval.config.build.check self;
         }
+        // (testsFrom self.packages.${system}.default)
       );
     };
 }

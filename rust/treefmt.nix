@@ -28,6 +28,7 @@
     enable = true;
     includes = [
       "*.rs"
+      "*.nix"
     ];
   };
 }

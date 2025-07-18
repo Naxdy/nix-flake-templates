@@ -15,6 +15,16 @@
             - get rusty
           '';
         };
+
+        pnpm = {
+          path = ./pnpm;
+          description = "Starter flake for nodejs projects using `pnpm`, as well as `treefmt` for project-wide formatting.";
+          welcomeText = ''
+            # Getting Started
+            - enter a dev shell with `nix develop` or `direnv`
+            - initialize your pnpm project
+          '';
+        };
       };
     };
 }

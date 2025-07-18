@@ -82,6 +82,9 @@
             # Getting Started
             - enter a dev shell with `nix develop` or `direnv`
             - initialize your pnpm project
+
+            # Note
+            The project has been initialized with a stub `package.json` file. You may want to remove / regenerate it with proper information.
           '';
         };
       };

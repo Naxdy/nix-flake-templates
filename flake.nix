@@ -1,9 +1,59 @@
 {
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+  };
+
   description = "Flake templates that make sense";
 
   outputs =
-    { self }:
     {
+      self,
+      treefmt-nix,
+      nixpkgs,
+    }:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
+
+      forEachSupportedSystem =
+        f:
+        nixpkgs.lib.genAttrs supportedSystems (
+          system:
+          let
+            pkgs = import nixpkgs {
+              inherit system;
+            };
+
+            treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+
+            treefmt = treefmtEval.config.build.wrapper;
+          in
+          f {
+            inherit
+              pkgs
+              system
+              treefmt
+              treefmtEval
+              ;
+          }
+        );
+    in
+    {
+      formatter = forEachSupportedSystem ({ treefmt, ... }: treefmt);
+
+      checks = forEachSupportedSystem (
+        { treefmtEval, ... }:
+        {
+          treefmt = treefmtEval.config.build.check self;
+        }
+      );
+
       templates = {
         rust = {
           path = ./rust;

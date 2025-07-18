@@ -21,6 +21,7 @@
       trailingComma = "all";
       semi = true;
       printWidth = 120;
+      singleQuote = true;
     };
   };
 

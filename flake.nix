@@ -47,6 +47,15 @@
     {
       formatter = forEachSupportedSystem ({ treefmt, ... }: treefmt);
 
+      devShells = forEachSupportedSystem (
+        { pkgs, treefmt, ... }:
+        {
+          default = pkgs.mkShell {
+            packages = [ treefmt ];
+          };
+        }
+      );
+
       checks = forEachSupportedSystem (
         { treefmtEval, ... }:
         {

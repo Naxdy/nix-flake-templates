@@ -48,7 +48,6 @@ in
     craneBuildArgs
     // {
       passthru = {
-        inherit rustToolchain cargoToml;
         tests = {
           test = craneLib.cargoTest craneBuildArgs;
 
@@ -69,4 +68,6 @@ in
       cargoDocExtraArgs = "";
     }
   );
+
+  inherit rustToolchain cargoToml;
 }

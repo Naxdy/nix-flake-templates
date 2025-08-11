@@ -38,13 +38,14 @@
             package = pkgs.callPackage ./default.nix { inherit crane; };
 
             treefmtEval = treefmt-nix.lib.evalModule pkgs (
-              import ./treefmt.nix { inherit (package.package.passthru) rustToolchain cargoToml; }
+              import ./treefmt.nix { inherit (package) rustToolchain cargoToml; }
             );
 
             treefmt = treefmtEval.config.build.wrapper;
           in
           f {
             inherit
+              package
               pkgs
               system
               treefmt
@@ -57,9 +58,7 @@
       devShells = forEachSupportedSystem (
         {
           pkgs,
-          rustToolchain,
           treefmt,
-          craneBuildArgs,
           system,
           package,
           ...
@@ -77,7 +76,7 @@
 
           toolchainOnly = pkgs.mkShell {
             nativeBuildInputs = [
-              package.package.passthru.rustToolchain
+              package.rustToolchain
             ];
           };
         }

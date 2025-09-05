@@ -30,7 +30,7 @@
 
             nodejs = pkgs.nodejs_22;
 
-            treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmx.nix;
+            treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
 
             treefmt = treefmtEval.config.build.wrapper;
           in

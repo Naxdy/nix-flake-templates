@@ -11,10 +11,13 @@
       semi = true;
       printWidth = 120;
       singleQuote = true;
+      proseWrap = "always";
     };
   };
 
   programs.black.enable = true;
+
+  programs.taplo.enable = true;
 
   programs.typos = {
     enable = true;

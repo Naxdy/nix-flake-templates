@@ -87,6 +87,17 @@
             The project has been initialized with a stub `package.json` file. You may want to remove / regenerate it with proper information.
           '';
         };
+
+        python-nn = {
+          path = ./python-nn;
+          description = "Starter flake for Python projects intended for deep learning applications, with uv.";
+          welcomeText = ''
+            # Getting Started
+            - enter the impure (default) dev shell with `nix develop` or `direnv`
+            - initialize your uv project
+            - afterwards, you may use the `uv2nix` dev shell, to make use of fully reproducible dependencies
+          '';
+        };
       };
     };
 }

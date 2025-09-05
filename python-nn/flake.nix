@@ -63,6 +63,7 @@
                   "nvidia-cufile-cu12"
                   "nvidia-cusolver-cu12"
                   "nvidia-cusparse-cu12"
+                  "nvidia-nvshmem-cu12"
                   "torch"
                 ];
 
@@ -79,12 +80,18 @@
                   "libcusolver.so.11"
                   "libcusparse.so.12"
                   "libcusparseLt.so.0"
+                  "libfabric.so.1"
                   "libibverbs.so.1"
                   "libmlx5.so.1"
+                  "libmpi.so.40"
                   "libnccl.so.2"
                   "libnvJitLink.so.12"
                   "libnvrtc.so.12"
+                  "liboshmem.so.40"
+                  "libpmix.so.2"
                   "librdmacm.so.1"
+                  "libucp.so.0"
+                  "libucs.so.0"
                 ];
               in
               final: prev:

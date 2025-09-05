@@ -54,60 +54,63 @@
               sourcePreference = "wheel";
             };
 
-            # nvidia deps have a lot of shared objects that depend on each other,
-            # however they will be invisible to nix and autoPatchelfHook, so we need
-            # to mask them here
-            ignoreMissingDepsOverlay =
+            # some nvidia deps need to see each other to be able to properly link their libraries
+            fixupNvidiaLibsOverlay =
+              final: prev:
               let
-                packages = [
-                  "nvidia-cufile-cu12"
-                  "nvidia-cusolver-cu12"
-                  "nvidia-cusparse-cu12"
-                  "nvidia-nvshmem-cu12"
-                  "torch"
-                ];
+                nvidiaPackages = {
+                  cusolver = {
+                    addDeps = [
+                      "cublas"
+                      "cusparse"
+                      "nvjitlink"
+                    ];
+                  };
+                  cusparse = {
+                    addDeps = [
+                      "nvjitlink"
+                    ];
+                  };
+                  nvshmem = {
+                    addNativeDeps = [
+                      pkgs.mpi
+                    ];
+                  };
+                };
 
-                missingDeps = [
-                  "libcublas.so.12"
-                  "libcublasLt.so.12"
-                  "libcuda.so.1"
-                  "libcudart.so.12"
-                  "libcudnn.so.9"
-                  "libcufft.so.11"
-                  "libcufile.so.0"
-                  "libcupti.so.12"
-                  "libcurand.so.10"
-                  "libcusolver.so.11"
-                  "libcusparse.so.12"
-                  "libcusparseLt.so.0"
-                  "libfabric.so.1"
-                  "libibverbs.so.1"
+                ignoreDeps = [
                   "libmlx5.so.1"
-                  "libmpi.so.40"
-                  "libnccl.so.2"
-                  "libnvJitLink.so.12"
-                  "libnvrtc.so.12"
-                  "liboshmem.so.40"
-                  "libpmix.so.2"
-                  "librdmacm.so.1"
-                  "libucp.so.0"
-                  "libucs.so.0"
                 ];
               in
-              final: prev:
               (builtins.listToAttrs (
                 map (name: {
-                  inherit name;
-                  value = prev.${name}.overrideAttrs (old: {
-                    autoPatchelfIgnoreMissingDeps = missingDeps;
+                  name = "nvidia-${name}-cu12";
+                  value = prev."nvidia-${name}-cu12".overrideAttrs (old: {
+                    buildInputs =
+                      (old.buildInputs or [ ])
+                      ++ (pkgs.lib.optionals (
+                        nvidiaPackages.${name} ? addNativeDeps
+                      ) nvidiaPackages.${name}.addNativeDeps);
+
+                    autoPatchelfIgnoreMissingDeps = ignoreDeps;
+
+                    preFixup =
+                      (old.preFixup or "")
+                      + ''
+                        ${builtins.concatStringsSep "\n" (
+                          pkgs.lib.optionals (nvidiaPackages.${name} ? addDeps) (
+                            map (e: "addAutoPatchelfSearchPath \"${final."nvidia-${e}-cu12"}\"") nvidiaPackages.${name}.addDeps
+                          )
+                        )}
+                      '';
                   });
-                }) packages
+                }) (builtins.attrNames nvidiaPackages)
               ));
 
             pythonSet = (pkgs.callPackage pyproject-nix.build.packages { inherit python; }).overrideScope (
               pkgs.lib.composeManyExtensions [
                 pyproject-build-systems.overlays.default
-                ignoreMissingDepsOverlay
+                fixupNvidiaLibsOverlay
                 overlay
               ]
             );
@@ -118,7 +121,7 @@
           in
           f {
             inherit
-              ignoreMissingDepsOverlay
+              fixupNvidiaLibsOverlay
               overlay
               pkgs
               python
@@ -136,7 +139,7 @@
 
       devShells = forEachSupportedSystem (
         {
-          ignoreMissingDepsOverlay,
+          fixupNvidiaLibsOverlay,
           pkgs,
           python,
           pythonSet,
@@ -189,7 +192,7 @@
               editablePythonSet = pythonSet.overrideScope (
                 pkgs.lib.composeManyExtensions [
                   editableOverlay
-                  ignoreMissingDepsOverlay
+                  fixupNvidiaLibsOverlay
                   (final: prev: {
                     ${pyproject.project.name} = prev.${pyproject.project.name}.overrideAttrs (old: {
                       src = pkgs.lib.fileset.toSource {
@@ -227,6 +230,11 @@
 
                 # Get repository root using git. This is expanded at runtime by the editable `.pth` machinery.
                 export REPO_ROOT=$(git rev-parse --show-toplevel)
+
+                # make sure all nvidia libraries are findable by python
+                for f in $(find -L "${virtualenv}/${python.sitePackages}/nvidia" -type d -name "lib"); do
+                  export LD_LIBRARY_PATH="$f:$LD_LIBRARY_PATH"
+                done
 
                 # Needed for Pytorch to find cuda libraries
                 export LD_LIBRARY_PATH=/run/opengl-driver/lib:$LD_LIBRARY_PATH

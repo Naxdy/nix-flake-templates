@@ -229,9 +229,11 @@
       );
 
       checks = forEachSupportedSystem (
-        { treefmtEval, ... }:
+        { treefmtEval, system, ... }:
         {
           treefmt = treefmtEval.config.build.check self;
+
+          uv2nixShell = self.devShells.${system}.uv2nix;
         }
       );
     };

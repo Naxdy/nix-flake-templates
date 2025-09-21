@@ -54,25 +54,25 @@
               sourcePreference = "wheel";
             };
 
-            # some nvidia deps need to see each other to be able to properly link their libraries
-            fixupNvidiaLibsOverlay =
+            # some packages don't have their dependencies declared properly, or need native libraries from other packages
+            fixupLibsOverlay =
               final: prev:
               let
-                nvidiaPackages = {
-                  cusolver = {
-                    addDeps = [
-                      "cublas"
-                      "cusparse"
-                      "nvjitlink"
+                packages = {
+                  nvidia-cusolver-cu12 = {
+                    buildInputs = [
+                      final.nvidia-cublas-cu12
+                      final.nvidia-cusparse-cu12
+                      final.nvidia-nvjitlink-cu12
                     ];
                   };
-                  cusparse = {
-                    addDeps = [
-                      "nvjitlink"
+                  nvidia-cusparse-cu12 = {
+                    buildInputs = [
+                      final.nvidia-nvjitlink-cu12
                     ];
                   };
-                  nvshmem = {
-                    addNativeDeps = [
+                  nvidia-nvshmem-cu12 = {
+                    nativeBuildInputs = [
                       pkgs.mpi
                     ];
                   };
@@ -82,35 +82,30 @@
                   "libmlx5.so.1"
                 ];
               in
-              (builtins.listToAttrs (
+              builtins.listToAttrs (
                 map (name: {
-                  name = "nvidia-${name}-cu12";
-                  value = prev."nvidia-${name}-cu12".overrideAttrs (old: {
-                    buildInputs =
-                      (old.buildInputs or [ ])
-                      ++ (pkgs.lib.optionals (
-                        nvidiaPackages.${name} ? addNativeDeps
-                      ) nvidiaPackages.${name}.addNativeDeps);
+                  inherit name;
+                  value = prev.${name}.overrideAttrs (old: {
+                    buildInputs = (old.buildInputs or [ ]) ++ (packages.${name}.buildInputs or [ ]);
+                    propagatedBuildInputs =
+                      (old.propagatedBuildInputs or [ ]) ++ (packages.${name}.propagatedBuildInputs or [ ]);
+                    nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ (packages.${name}.nativeBuildInputs or [ ]);
 
                     autoPatchelfIgnoreMissingDeps = ignoreDeps;
 
                     preFixup =
                       (old.preFixup or "")
-                      + ''
-                        ${builtins.concatStringsSep "\n" (
-                          pkgs.lib.optionals (nvidiaPackages.${name} ? addDeps) (
-                            map (e: "addAutoPatchelfSearchPath \"${final."nvidia-${e}-cu12"}\"") nvidiaPackages.${name}.addDeps
-                          )
-                        )}
-                      '';
+                      + (builtins.concatStringsSep "\n" (
+                        map (e: "addAutoPatchelfSearchPath \"${e}\"") (packages.${name}.buildInputs or [ ])
+                      ));
                   });
-                }) (builtins.attrNames nvidiaPackages)
-              ));
+                }) (builtins.attrNames packages)
+              );
 
             pythonSet = (pkgs.callPackage pyproject-nix.build.packages { inherit python; }).overrideScope (
               pkgs.lib.composeManyExtensions [
                 pyproject-build-systems.overlays.default
-                fixupNvidiaLibsOverlay
+                fixupLibsOverlay
                 overlay
               ]
             );
@@ -121,7 +116,7 @@
           in
           f {
             inherit
-              fixupNvidiaLibsOverlay
+              fixupLibsOverlay
               overlay
               pkgs
               python
@@ -139,7 +134,7 @@
 
       devShells = forEachSupportedSystem (
         {
-          fixupNvidiaLibsOverlay,
+          fixupLibsOverlay,
           pkgs,
           python,
           pythonSet,
@@ -192,7 +187,7 @@
               editablePythonSet = pythonSet.overrideScope (
                 pkgs.lib.composeManyExtensions [
                   editableOverlay
-                  fixupNvidiaLibsOverlay
+                  fixupLibsOverlay
                   (final: prev: {
                     ${pyproject.project.name} = prev.${pyproject.project.name}.overrideAttrs (old: {
                       src = pkgs.lib.fileset.toSource {

@@ -98,6 +98,17 @@
             - afterwards, you may use the `uv2nix` dev shell, to make use of fully reproducible dependencies
           '';
         };
+
+        latex = {
+          path = ./latex;
+          description = "Flake template for building LaTeX projects using pdflatex";
+          welcomeText = ''
+            # Getting Started
+            - enter the dev shell with `nix develop` or `direnv`
+            - create one or more `.tex` files
+            - specify your package name & version in the `flake.nix`
+          '';
+        };
       };
     };
 }

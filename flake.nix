@@ -109,6 +109,16 @@
             - specify your package name & version in the `flake.nix`
           '';
         };
+
+        monorepo = {
+          path = ./monorepo;
+          description = "Template for building multiple (polyglot) packages as part of a monorepo.";
+          welcomeText = ''
+            # Getting Started
+            - define your package scope name in the `flake.nix`
+            - start adding packages within the `./pkgs` directory
+          '';
+        };
       };
     };
 }

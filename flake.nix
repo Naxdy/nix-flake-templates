@@ -69,7 +69,8 @@
           description = "Starter flake for rust projects, using `crane` and `fenix`, as well as `treefmt` for project-wide formatting.";
           welcomeText = ''
             # Getting Started
-            - run `nix develop .#toolchainOnly --command cargo init` to initialize a rust project
+            - amend the `Cargo.toml` file with your package details
+            - create source files under `./src/main.rs` for a binary, or `./src/lib.rs` for a library
             - enter a dev shell with `nix develop` or `direnv`
             - get rusty
           '';

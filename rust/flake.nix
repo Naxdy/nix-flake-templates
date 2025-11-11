@@ -18,7 +18,7 @@
       treefmt-nix,
     }:
     let
-      pname = builtins.trace "Missing package name in flake.nix - set one to enable building your project" null;
+      pname = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.name;
 
       supportedSystems = [
         "x86_64-linux"
@@ -119,7 +119,7 @@
 
       overlays.default =
         final: prev:
-        (final.lib.optionalAttrs (pname != null) {
+        (prev.lib.optionalAttrs (pname != null) {
           "${pname}" = final.callPackage ./default.nix {
             fenix = final.callPackage fenix { };
             craneLib = crane.mkLib final;

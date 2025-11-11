@@ -1,0 +1,12 @@
+[package]
+name = "my-package"
+version = "0.1.0"
+edition = "2024"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = 0 }
+nursery = { level = "warn", priority = 0 }
+unwrap_used = { level = "warn", priority = 0 }
+cognitive_complexity = { level = "allow", priority = 1 }
+
+[dependencies]

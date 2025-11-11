@@ -18,6 +18,8 @@
       treefmt-nix,
     }:
     let
+      pname = builtins.trace "Missing package name in flake.nix - set one to enable building your project" null;
+
       supportedSystems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -32,20 +34,15 @@
           let
             pkgs = import nixpkgs {
               inherit system;
-              overlays = [ fenix.overlays.default ];
+              overlays = [ self.overlays.default ];
             };
 
-            package = pkgs.callPackage ./default.nix { inherit crane; };
-
-            treefmtEval = treefmt-nix.lib.evalModule pkgs (
-              import ./treefmt.nix { inherit (package) rustToolchain cargoToml; }
-            );
+            treefmtEval = treefmt-nix.lib.evalModule pkgs (import ./treefmt.nix { inherit pname; });
 
             treefmt = treefmtEval.config.build.wrapper;
           in
           f {
             inherit
-              package
               pkgs
               system
               treefmt
@@ -60,7 +57,6 @@
           pkgs,
           treefmt,
           system,
-          package,
           ...
         }:
         {
@@ -69,14 +65,15 @@
           full = pkgs.mkShell {
             packages = [
               treefmt
+              pkgs.${pname}.passthru.rustToolchain
             ];
 
-            inputsFrom = [ self.packages.${system}.default ];
+            inputsFrom = [ pkgs.${pname} ];
           };
 
           toolchainOnly = pkgs.mkShell {
             nativeBuildInputs = [
-              package.rustToolchain
+              pkgs.${pname}.passthru.rustToolchain
             ];
           };
         }
@@ -86,13 +83,16 @@
 
       packages = forEachSupportedSystem (
         {
-          package,
+          pkgs,
+          system,
           ...
         }:
         {
-          default = package.package;
+          default = self.packages.${system}.${pname};
 
-          inherit (package) docs;
+          ${pname} = pkgs.${pname};
+
+          inherit (pkgs.${pname}.passthru) docs;
         }
       );
 
@@ -114,7 +114,16 @@
         {
           treefmt = treefmtEval.config.build.check self;
         }
-        // (testsFrom self.packages.${system}.default)
+        // (testsFrom pkgs.${pname})
       );
+
+      overlays.default =
+        final: prev:
+        (final.lib.optionalAttrs (pname != null) {
+          "${pname}" = final.callPackage ./default.nix {
+            fenix = final.callPackage fenix { };
+            craneLib = crane.mkLib final;
+          };
+        });
     };
 }

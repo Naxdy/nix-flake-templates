@@ -12,12 +12,17 @@
       treefmt-nix,
     }:
     let
+      packageJSON = builtins.fromJSON (builtins.readFile ./package.json);
+
       supportedSystems = [
         "x86_64-linux"
         "aarch64-linux"
         "x86_64-darwin"
         "aarch64-darwin"
       ];
+
+      nodejs = builtins.throw "Missing nodejs version, pin one in flake.nix";
+      pnpm = builtins.throw "Missing pnpm version, pin one in flake.nix";
 
       forEachSupportedSystem =
         f:
@@ -26,9 +31,10 @@
           let
             pkgs = import nixpkgs {
               inherit system;
+              overlays = [
+                self.overlays.default
+              ];
             };
-
-            nodejs = pkgs.nodejs_22;
 
             treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
 
@@ -36,7 +42,6 @@
           in
           f {
             inherit
-              nodejs
               pkgs
               system
               treefmt
@@ -49,15 +54,14 @@
       formatter = forEachSupportedSystem ({ treefmt, ... }: treefmt);
 
       packages = forEachSupportedSystem (
-        { pkgs, nodejs, ... }:
+        { pkgs, ... }:
         {
-          default = pkgs.callPackage ./default.nix { inherit nodejs; };
+          default = pkgs."${packageJSON.name}";
         }
       );
 
       devShells = forEachSupportedSystem (
         {
-          nodejs,
           pkgs,
           system,
           treefmt,
@@ -73,5 +77,30 @@
           };
         }
       );
+
+      checks = forEachSupportedSystem (
+        { pkgs, treefmtEval, ... }:
+        let
+          testsFrom =
+            pkg:
+            pkgs.lib.mapAttrs' (name: value: {
+              name = "${pkg.pname}-${name}";
+              inherit value;
+            }) (pkg.passthru.tests or { });
+        in
+        (testsFrom pkgs."${packageJSON.name}")
+        // {
+          treefmt = treefmtEval.config.build.check self;
+        }
+      );
+
+      overlays.default = final: prev: {
+        "${packageJSON.name}" = final.callPackage ./default.nix {
+          nodejs = final.${nodejs};
+          pnpm = (final.${pnpm}).override {
+            nodejs = final.${nodejs};
+          };
+        };
+      };
     };
 }

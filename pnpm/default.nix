@@ -5,10 +5,6 @@
   stdenv,
 }:
 let
-  pnpmPkg = pnpm.override {
-    inherit nodejs;
-  };
-
   packageJSON = builtins.fromJSON (builtins.readFile ./package.json);
 in
 stdenv.mkDerivation (finalAttrs: {
@@ -22,6 +18,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   pnpmDeps = pnpm.fetchDeps {
     inherit (finalAttrs) pname version src;
+    fetcherVersion = 2;
     hash = lib.fakeHash;
   };
 
@@ -35,12 +32,12 @@ stdenv.mkDerivation (finalAttrs: {
   };
 
   nativeBuildInputs = [
-    pnpmPkg
+    pnpm
     nodejs
   ];
 
   buildInputs = [
-    pnpmPkg.configHook
+    pnpm.configHook
   ];
 
   # TODO: buildPhase, installPhase

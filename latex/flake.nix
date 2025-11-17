@@ -62,7 +62,11 @@
             buildPhase = ''
               find . -type f -name "*.tex" -print0 | while read -d $'\0' f
               do
-                pdflatex "$f"
+                pushd "$(dirname "$f")"
+
+                pdflatex "$(basename "$f")"
+
+                popd
               done
             '';
 

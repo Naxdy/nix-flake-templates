@@ -1,6 +1,7 @@
 {
-  fenix,
+  cargo-shear,
   craneLib,
+  fenix,
 }:
 let
   rustToolchain = fenix.stable.withComponents [
@@ -64,6 +65,15 @@ craneLib'.buildPackage (
         doc = craneLib'.cargoDoc craneBuildArgs;
 
         clippy = craneLib'.cargoClippy craneBuildArgs;
+
+        shear = craneLib.mkCargoDerivation (
+          craneBuildArgs
+          // {
+            pnameSuffix = "shear";
+            buildPhaseCargoCommand = "cargo shear --frozen";
+            nativeBuildInputs = (craneBuildArgs.nativeBuildInputs or [ ]) ++ [ cargo-shear ];
+          }
+        );
       };
     };
   }

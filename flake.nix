@@ -120,6 +120,16 @@
             - start adding packages within the `./pkgs` directory
           '';
         };
+
+        basic = {
+          path = ./basic;
+          description = "A basic template with treefmt-nix, direnv and not much else.";
+          welcomeText = ''
+            # Getting Started
+            - run `direnv allow` to permit dev shell access
+            - that's it!
+          '';
+        };
       };
     };
 }

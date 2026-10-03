@@ -2,11 +2,17 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    fenix.url = "github:nix-community/fenix";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     crane.url = "github:ipetkov/crane";
 
-    treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -18,7 +24,11 @@
       treefmt-nix,
     }:
     let
-      pname = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.name;
+      cargoToml = (builtins.fromTOML (builtins.readFile ./Cargo.toml));
+
+      pname =
+        cargoToml.workspace.metadata.crane.pname or cargoToml.package.metadata.crane.pname
+          or cargoToml.package.name;
 
       supportedSystems = [
         "x86_64-linux"

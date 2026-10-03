@@ -6,11 +6,12 @@
 let
   rustToolchain = fenix.stable.withComponents [
     "cargo"
+    "clippy"
+    "rust-analyzer"
+    "rust-src"
+    "rust-std"
     "rustc"
     "rustfmt"
-    "rust-std"
-    "rust-analyzer"
-    "clippy"
   ];
 
   craneLib' = craneLib.overrideToolchain rustToolchain;
@@ -18,7 +19,9 @@ let
   cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
 
   craneArgs = {
-    pname = cargoToml.workspace.package.name or cargoToml.package.name;
+    pname =
+      cargoToml.workspace.metadata.crane.pname or cargoToml.package.metadata.crane.pname
+        or cargoToml.package.name;
     version = cargoToml.workspace.package.version or cargoToml.package.version;
 
     src = craneLib'.cleanCargoSource ./.;
